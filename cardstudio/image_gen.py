@@ -48,19 +48,34 @@ def _field_path(field: Any) -> str:
             return storage.path(name.lstrip("/"))
     return field.path
 
-
 def _open_image_field(field: Any) -> Image.Image:
     name = getattr(field, "name", None)
-    if isinstance(name, str) and name.startswith("/"):
-        log.warning("FileField name starts with '/'; stripping leading slash: %s", name)
-        storage = getattr(field, "storage", None)
-        if storage is not None:
-            cleaned = name.lstrip("/")
-            if hasattr(storage, "path"):
-                return Image.open(storage.path(cleaned))
-            return Image.open(storage.open(cleaned, "rb"))
-    return Image.open(field)
+    storage = getattr(field, "storage", None)
 
+    if isinstance(name, str):
+        if name.startswith("/"):
+            log.warning(
+                "CardStudio received an absolute-looking storage path %r; "
+                "normalizing it before opening.",
+                name,
+            )
+            name = name.lstrip("/")
+
+        if storage is not None:
+            if hasattr(storage, "path"):
+                return Image.open(storage.path(name)).convert("RGBA")
+
+            with storage.open(name, "rb") as file:
+                with Image.open(file) as image:
+                    return image.convert("RGBA")
+
+    path = getattr(field, "path", None)
+    if path:
+        return Image.open(path).convert("RGBA")
+
+    with field.open("rb") as file:
+        with Image.open(file) as image:
+            return image.convert("RGBA")
 
 def load_font(field: Any, size: int, default_name: str) -> ImageFont.FreeTypeFont:
     if field and field.name:

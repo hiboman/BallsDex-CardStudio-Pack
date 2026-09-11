@@ -1,6 +1,6 @@
 [project]
 name = "cardstudio"
-version = "0.0.1"
+version = "0.0.2"
 
 description = "Full card customization for Ballsdex."
 license = "MIT"
